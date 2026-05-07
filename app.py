@@ -1,275 +1,222 @@
-
-
-
-import os
-print("CURRENT PATH:", os.getcwd())
-
-
-# In[49]:
-
-
+import streamlit as st
 import pandas as pd
 import numpy as np
-
 import matplotlib.pyplot as plt
 import seaborn as sns
 
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, classification_report
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 
-# In[85]:
+# ---------------- PAGE TITLE ----------------
 
+st.set_page_config(page_title="Employee Attrition Analysis", layout="wide")
 
-import pandas as pd
+st.title("Employee Attrition Analysis Dashboard")
+
+# ---------------- LOAD DATA ----------------
 
 df = pd.read_csv("WA_Fn-UseC_-HR-Employee-Attrition.csv")
-print(df.head())
-print("Data loaded successfully")
 
+st.subheader("Employee Dataset")
+st.dataframe(df.head())
 
-# In[51]:
-
-
-import os
-print(os.getcwd())
-
-
-# In[52]:
-
+# ---------------- SELECT IMPORTANT COLUMNS ----------------
 
 df = df[['Age', 'Department', 'DistanceFromHome', 'EducationField',
          'JobSatisfaction', 'MonthlyIncome', 'NumCompaniesWorked',
          'YearsAtCompany', 'OverTime', 'BusinessTravel', 'Attrition']]
 
-
-# In[53]:
-
+# ---------------- TARGET ENCODING ----------------
 
 df['Attrition'] = df['Attrition'].map({'Yes': 1, 'No': 0})
 
+# ---------------- ONE HOT ENCODING ----------------
 
-# In[54]:
+df = pd.get_dummies(
+    df,
+    columns=['Department', 'EducationField', 'OverTime', 'BusinessTravel'],
+    drop_first=True
+)
 
-
-df = pd.get_dummies(df,
-                   columns=['Department', 'EducationField', 'OverTime', 'BusinessTravel'],
-                   drop_first=True)
-print("Data preprocessing completed")
-
-
-# In[55]:
-
-
-print(df.columns)
-
-
-# In[56]:
-
-
-print(df.head())
-
-
-# In[57]:
-
-
-print(df.dtypes)
-
-
-# In[58]:
-
-
-print('Attrition' in df.columns)
-
-
-# In[59]:
-
-
-print("Final columns:", df.columns)
-print("Attrition exists after encoding:", 'Attrition' in df.columns)
-
-
-# In[60]:
-
+# ---------------- SCALING ----------------
 
 scaler = StandardScaler()
 
-num_cols = ['Age', 'DistanceFromHome', 'MonthlyIncome',
-            'NumCompaniesWorked', 'YearsAtCompany']
+num_cols = [
+    'Age',
+    'DistanceFromHome',
+    'MonthlyIncome',
+    'NumCompaniesWorked',
+    'YearsAtCompany'
+]
 
 df[num_cols] = scaler.fit_transform(df[num_cols])
 
+# ---------------- METRICS ----------------
 
-# In[61]:
+total_emp = len(df)
+employees_left = df['Attrition'].sum()
+attrition_rate = (employees_left / total_emp) * 100
 
+col1, col2, col3 = st.columns(3)
 
-import seaborn as sns
-import matplotlib.pyplot as plt
+col1.metric("Total Employees", total_emp)
+col2.metric("Employees Left", employees_left)
+col3.metric("Attrition Rate", f"{attrition_rate:.2f}%")
 
+# ---------------- CHART 1 ----------------
 
-# In[62]:
+st.subheader("Attrition Distribution")
 
+fig1, ax1 = plt.subplots()
 
-sns.countplot(x='Attrition', data=df)
-plt.title("Attrition Distribution")
-plt.show()
+sns.countplot(x='Attrition', data=df, ax=ax1)
 
+st.pyplot(fig1)
 
-# In[63]:
+# ---------------- CHART 2 ----------------
 
+st.subheader("Attrition vs Monthly Income")
 
-sns.boxplot(x='Attrition', y='MonthlyIncome', data=df)
-plt.title("Attrition vs Monthly Income")
-plt.show()
+fig2, ax2 = plt.subplots()
 
+sns.boxplot(x='Attrition', y='MonthlyIncome', data=df, ax=ax2)
 
-# In[64]:
+st.pyplot(fig2)
 
+# ---------------- CHART 3 ----------------
 
-sns.boxplot(x='Attrition', y='Age', data=df)
-plt.title("Attrition vs Age")
-plt.show()
+st.subheader("Attrition vs Age")
 
+fig3, ax3 = plt.subplots()
 
-# In[65]:
+sns.boxplot(x='Attrition', y='Age', data=df, ax=ax3)
 
+st.pyplot(fig3)
 
-import seaborn as sns
-import matplotlib.pyplot as plt
+# ---------------- CHART 4 ----------------
 
-sns.countplot(x='OverTime_Yes', hue='Attrition', data=df)
-plt.title("Attrition vs Overtime")
-plt.show()
+st.subheader("Attrition vs Overtime")
 
+fig4, ax4 = plt.subplots()
 
-# In[66]:
+sns.countplot(x='OverTime_Yes', hue='Attrition', data=df, ax=ax4)
 
+st.pyplot(fig4)
 
-import matplotlib.pyplot as plt
-import seaborn as sns
+# ---------------- HEATMAP ----------------
 
-plt.figure(figsize=(12,8))
+st.subheader("Correlation Heatmap")
 
-sns.heatmap(df.select_dtypes(include=['number']).corr(), cmap='coolwarm')
+fig5, ax5 = plt.subplots(figsize=(12,8))
 
-plt.title("Correlation Heatmap")
-plt.show()
+sns.heatmap(
+    df.select_dtypes(include=['number']).corr(),
+    cmap='coolwarm',
+    ax=ax5
+)
 
+st.pyplot(fig5)
 
-# In[67]:
-
-
-X = df.drop('Attrition', axis=1)
-y = df['Attrition']
-
-
-# In[68]:
-
-
-from sklearn.model_selection import train_test_split
+# ---------------- FEATURES & TARGET ----------------
 
 X = df.drop("Attrition", axis=1)
 y = df["Attrition"]
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-print("Model training completed")
+# ---------------- TRAIN TEST SPLIT ----------------
 
+X_train, X_test, y_train, y_test = train_test_split(
+    X,
+    y,
+    test_size=0.2,
+    random_state=42
+)
 
-# In[69]:
+# ---------------- RANDOM FOREST ----------------
 
+rf_model = RandomForestClassifier(random_state=42)
 
-print(y_train.shape)
-print(type(y_train))
+rf_model.fit(X_train, y_train)
 
+y_pred_rf = rf_model.predict(X_test)
 
-# In[70]:
+rf_accuracy = accuracy_score(y_test, y_pred_rf)
 
+# ---------------- LOGISTIC REGRESSION ----------------
 
-from sklearn.ensemble import RandomForestClassifier
+lr_model = LogisticRegression(max_iter=1000)
 
-model = RandomForestClassifier()
-model.fit(X_train, y_train)
+lr_model.fit(X_train, y_train)
 
-# In[71]:
+y_pred_lr = lr_model.predict(X_test)
 
+lr_accuracy = accuracy_score(y_test, y_pred_lr)
 
-y_pred_rf = model.predict(X_test)   
-print("Random Forest Accuracy:", accuracy_score(y_test, y_pred_rf))
+# ---------------- MODEL ACCURACY ----------------
 
+st.subheader("Model Accuracy")
 
-# In[72]:
+col4, col5 = st.columns(2)
 
+col4.metric("Random Forest Accuracy", f"{rf_accuracy:.2f}")
 
-from sklearn.linear_model import LogisticRegression
+col5.metric("Logistic Regression Accuracy", f"{lr_accuracy:.2f}")
 
-lr = LogisticRegression(max_iter=1000)
-lr.fit(X_train, y_train)
+# ---------------- CONFUSION MATRIX ----------------
 
+st.subheader("Confusion Matrix")
 
-# In[74]:
+cm = confusion_matrix(y_test, y_pred_rf)
 
-y_pred = model.predict(X_test)
-print("Prediction completed")
+fig6, ax6 = plt.subplots()
 
-# In[75]:
+sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=ax6)
 
+ax6.set_xlabel("Predicted")
+ax6.set_ylabel("Actual")
 
-from sklearn.metrics import confusion_matrix
+st.pyplot(fig6)
 
-print(confusion_matrix(y_test, y_pred))
+# ---------------- CLASSIFICATION REPORT ----------------
 
+st.subheader("Classification Report")
 
-# In[76]:
+report = classification_report(y_test, y_pred_rf)
 
+st.text(report)
 
-from sklearn.metrics import classification_report
+# ---------------- FEATURE IMPORTANCE ----------------
 
-print(classification_report(y_test, y_pred))
+st.subheader("Top 10 Important Features")
 
+importance = pd.Series(
+    rf_model.feature_importances_,
+    index=X.columns
+)
 
-# In[77]:
+top_features = importance.sort_values(ascending=False).head(10)
 
+fig7, ax7 = plt.subplots(figsize=(10,5))
 
-y_pred_rf = model.predict(X_test)
-print("Random Forest Accuracy:", accuracy_score(y_test, y_pred_rf))# In[78]:
+top_features.plot(kind='bar', ax=ax7)
 
+st.pyplot(fig7)
 
-from sklearn.metrics import accuracy_score, classification_report
+# ---------------- HIGH RISK EMPLOYEES ----------------
 
-y_pred = lr.predict(X_test)
-
-print("Accuracy:", accuracy_score(y_test, y_pred))
-print(classification_report(y_test, y_pred))
-
-
-# In[79]:
-
-
-importance = pd.Series(model.feature_importances_, index=X.columns)
-
-print("\nTop 10 Important Features:")
-print(importance.sort_values(ascending=False).head(10))
-# In[80]:
-
-
-importance.sort_values(ascending=False).head(10).plot(kind='bar')
-plt.title("Top 10 Important Features")
-plt.show()
-
-# In[81]:
-
-
-df['RiskScore'] = model.predict_proba(X)[:, 1]
+df['RiskScore'] = rf_model.predict_proba(X)[:, 1]
 
 at_risk = df[df['RiskScore'] > 0.7]
 
-print("\n===== HIGH RISK EMPLOYEES =====")
-print(at_risk.head())
-# In[82]:
+st.subheader("High Risk Employees")
 
+st.dataframe(at_risk.head())
+
+# ---------------- DOWNLOAD CSV ----------------
 
 at_risk.to_csv("at_risk_employees.csv", index=False)
 
-print("PROJECT COMPLETED SUCCESSFULLY")
+st.success("Project Completed Successfully")

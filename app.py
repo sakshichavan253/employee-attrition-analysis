@@ -25,7 +25,7 @@ from sklearn.metrics import accuracy_score, classification_report
 
 import pandas as pd
 
-df = pd.read_csv("data/WA_Fn-UseC_-HR-Employee-Attrition.csv")
+df = pd.read_csv("WA_Fn-UseC_-HR-Employee-Attrition.csv")
 print(df.head())
 print("Data loaded successfully")
 

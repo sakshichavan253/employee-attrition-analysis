@@ -24,18 +24,19 @@ st.dataframe(df.head())
 
 
 
+df_encoded = df.copy()
+
+label_encoders = {}
+
+for column in df_encoded.columns:
+    if df_encoded[column].dtype == 'object':
+        le = LabelEncoder()
+        df_encoded[column] = le.fit_transform(df_encoded[column])
+        label_encoders[column] = le
 
 
-le = LabelEncoder()
-
-for column in df.columns:
-    if df[column].dtype == 'object':
-        df[column] = le.fit_transform(df[column])
-
-
-
-X = df.drop("Attrition", axis=1)
-y = df["Attrition"]
+X = df_encoded.drop("Attrition", axis=1)
+y = df_encoded["Attrition"]
 
 X_train, X_test, y_train, y_test = train_test_split(
     X,
@@ -145,9 +146,9 @@ st.subheader("High Risk Employees")
 
 risk_probabilities = rf_model.predict_proba(X)[:,1]
 
-df["Risk Score"] = risk_probabilities
+df_encoded["Risk Score"] = risk_probabilities
 
-high_risk = df[df["Risk Score"] > 0.7]
+high_risk = df_encoded[df_encoded["Risk Score"] > 0.7]
 
 st.dataframe(
     high_risk[

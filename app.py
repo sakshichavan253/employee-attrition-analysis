@@ -270,6 +270,6 @@ print(at_risk.head())
 # In[82]:
 
 
-at_risk.to_csv("outputs/at_risk_employees.csv", index=False)
+at_risk.to_csv("at_risk_employees.csv", index=False)
 
 print("PROJECT COMPLETED SUCCESSFULLY")

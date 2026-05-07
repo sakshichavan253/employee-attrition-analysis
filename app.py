@@ -1,167 +1,275 @@
-import streamlit as st
+
+
+
+import os
+print("CURRENT PATH:", os.getcwd())
+
+
+# In[49]:
+
+
 import pandas as pd
+import numpy as np
+
 import matplotlib.pyplot as plt
 import seaborn as sns
 
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
-from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import confusion_matrix, accuracy_score
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, classification_report
 
+# In[85]:
 
 
-st.title("Employee Attrition Analysis Dashboard")
+import pandas as pd
 
+df = pd.read_csv("data/WA_Fn-UseC_-HR-Employee-Attrition.csv")
+print(df.head())
+print("Data loaded successfully")
 
 
-df = pd.read_csv("WA_Fn-UseC_-HR-Employee-Attrition.csv")
+# In[51]:
 
 
+import os
+print(os.getcwd())
 
-st.subheader("Employee Dataset")
-st.dataframe(df.head())
 
+# In[52]:
 
 
-df_encoded = df.copy()
+df = df[['Age', 'Department', 'DistanceFromHome', 'EducationField',
+         'JobSatisfaction', 'MonthlyIncome', 'NumCompaniesWorked',
+         'YearsAtCompany', 'OverTime', 'BusinessTravel', 'Attrition']]
 
-label_encoders = {}
 
-for column in df_encoded.columns:
-    if df_encoded[column].dtype == 'object':
-        le = LabelEncoder()
-        df_encoded[column] = le.fit_transform(df_encoded[column])
-        label_encoders[column] = le
+# In[53]:
 
 
-X = df_encoded.drop("Attrition", axis=1)
-y = df_encoded["Attrition"]
+df['Attrition'] = df['Attrition'].map({'Yes': 1, 'No': 0})
 
-X_train, X_test, y_train, y_test = train_test_split(
-    X,
-    y,
-    test_size=0.2,
-    random_state=42
-)
 
+# In[54]:
 
 
-lr_model = LogisticRegression(max_iter=1000)
+df = pd.get_dummies(df,
+                   columns=['Department', 'EducationField', 'OverTime', 'BusinessTravel'],
+                   drop_first=True)
+print("Data preprocessing completed")
 
-lr_model.fit(X_train, y_train)
 
-lr_predictions = lr_model.predict(X_test)
+# In[55]:
 
-lr_accuracy = accuracy_score(y_test, lr_predictions)
 
-st.subheader("Logistic Regression Accuracy")
+print(df.columns)
 
-st.success(f"Accuracy: {lr_accuracy:.2f}")
 
+# In[56]:
 
 
-rf_model = RandomForestClassifier()
+print(df.head())
 
-rf_model.fit(X_train, y_train)
 
-rf_predictions = rf_model.predict(X_test)
+# In[57]:
 
-rf_accuracy = accuracy_score(y_test, rf_predictions)
 
-st.subheader("Random Forest Accuracy")
+print(df.dtypes)
 
-st.success(f"Accuracy: {rf_accuracy:.2f}")
 
+# In[58]:
 
 
-st.subheader("Confusion Matrix")
+print('Attrition' in df.columns)
 
-cm = confusion_matrix(y_test, rf_predictions)
 
-fig, ax = plt.subplots(figsize=(5,4))
+# In[59]:
 
-sns.heatmap(
-    cm,
-    annot=True,
-    fmt='d',
-    cmap='Blues',
-    ax=ax
-)
 
-plt.xlabel("Predicted")
-plt.ylabel("Actual")
+print("Final columns:", df.columns)
+print("Attrition exists after encoding:", 'Attrition' in df.columns)
 
-st.pyplot(fig)
 
+# In[60]:
 
 
-st.subheader("Correlation Heatmap")
+scaler = StandardScaler()
 
-fig2, ax2 = plt.subplots(figsize=(12,8))
+num_cols = ['Age', 'DistanceFromHome', 'MonthlyIncome',
+            'NumCompaniesWorked', 'YearsAtCompany']
 
-sns.heatmap(
-    df.corr(),
-    cmap='coolwarm',
-    annot=False,
-    ax=ax2
-)
+df[num_cols] = scaler.fit_transform(df[num_cols])
 
-st.pyplot(fig2)
 
+# In[61]:
 
 
-st.subheader("Attrition by Department")
+import seaborn as sns
+import matplotlib.pyplot as plt
 
-dept_attrition = pd.crosstab(
-    df['Department'],
-    df['Attrition']
-)
 
-fig3, ax3 = plt.subplots()
+# In[62]:
 
-dept_attrition.plot(kind='bar', ax=ax3)
 
-plt.xticks(rotation=20)
+sns.countplot(x='Attrition', data=df)
+plt.title("Attrition Distribution")
+plt.show()
 
-st.pyplot(fig3)
 
+# In[63]:
 
-st.subheader("Overtime vs Attrition")
 
-overtime = pd.crosstab(
-    df['OverTime'],
-    df['Attrition']
-)
+sns.boxplot(x='Attrition', y='MonthlyIncome', data=df)
+plt.title("Attrition vs Monthly Income")
+plt.show()
 
-fig4, ax4 = plt.subplots()
 
-overtime.plot(kind='bar', ax=ax4)
+# In[64]:
 
-st.pyplot(fig4)
 
+sns.boxplot(x='Attrition', y='Age', data=df)
+plt.title("Attrition vs Age")
+plt.show()
 
 
-st.subheader("High Risk Employees")
+# In[65]:
 
-risk_probabilities = rf_model.predict_proba(X)[:,1]
 
-df_encoded["Risk Score"] = risk_probabilities
+import seaborn as sns
+import matplotlib.pyplot as plt
 
-high_risk = df_encoded[df_encoded["Risk Score"] > 0.7]
+sns.countplot(x='OverTime_Yes', hue='Attrition', data=df)
+plt.title("Attrition vs Overtime")
+plt.show()
 
-st.dataframe(
-    high_risk[
-        ["Age", "MonthlyIncome", "JobSatisfaction", "Risk Score"]
-    ].head(10)
-)
 
+# In[66]:
 
-csv = df.to_csv(index=False)
 
-st.download_button(
-    label="Download Employee Dataset",
-    data=csv,
-    file_name="employee_attrition.csv",
-    mime="text/csv"
-)
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+plt.figure(figsize=(12,8))
+
+sns.heatmap(df.select_dtypes(include=['number']).corr(), cmap='coolwarm')
+
+plt.title("Correlation Heatmap")
+plt.show()
+
+
+# In[67]:
+
+
+X = df.drop('Attrition', axis=1)
+y = df['Attrition']
+
+
+# In[68]:
+
+
+from sklearn.model_selection import train_test_split
+
+X = df.drop("Attrition", axis=1)
+y = df["Attrition"]
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+print("Model training completed")
+
+
+# In[69]:
+
+
+print(y_train.shape)
+print(type(y_train))
+
+
+# In[70]:
+
+
+from sklearn.ensemble import RandomForestClassifier
+
+model = RandomForestClassifier()
+model.fit(X_train, y_train)
+
+# In[71]:
+
+
+y_pred_rf = model.predict(X_test)   
+print("Random Forest Accuracy:", accuracy_score(y_test, y_pred_rf))
+
+
+# In[72]:
+
+
+from sklearn.linear_model import LogisticRegression
+
+lr = LogisticRegression(max_iter=1000)
+lr.fit(X_train, y_train)
+
+
+# In[74]:
+
+y_pred = model.predict(X_test)
+print("Prediction completed")
+
+# In[75]:
+
+
+from sklearn.metrics import confusion_matrix
+
+print(confusion_matrix(y_test, y_pred))
+
+
+# In[76]:
+
+
+from sklearn.metrics import classification_report
+
+print(classification_report(y_test, y_pred))
+
+
+# In[77]:
+
+
+y_pred_rf = model.predict(X_test)
+print("Random Forest Accuracy:", accuracy_score(y_test, y_pred_rf))# In[78]:
+
+
+from sklearn.metrics import accuracy_score, classification_report
+
+y_pred = lr.predict(X_test)
+
+print("Accuracy:", accuracy_score(y_test, y_pred))
+print(classification_report(y_test, y_pred))
+
+
+# In[79]:
+
+
+importance = pd.Series(model.feature_importances_, index=X.columns)
+
+print("\nTop 10 Important Features:")
+print(importance.sort_values(ascending=False).head(10))
+# In[80]:
+
+
+importance.sort_values(ascending=False).head(10).plot(kind='bar')
+plt.title("Top 10 Important Features")
+plt.show()
+
+# In[81]:
+
+
+df['RiskScore'] = model.predict_proba(X)[:, 1]
+
+at_risk = df[df['RiskScore'] > 0.7]
+
+print("\n===== HIGH RISK EMPLOYEES =====")
+print(at_risk.head())
+# In[82]:
+
+
+at_risk.to_csv("outputs/at_risk_employees.csv", index=False)
+
+print("PROJECT COMPLETED SUCCESSFULLY")
